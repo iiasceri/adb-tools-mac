@@ -49,6 +49,67 @@ class AdbHelper {
             print("Error opening file: \(error)")
         }
     }
+    
+    func launchActivity(deviceId: String) {
+        // Get list of third-party packages only
+        let packagesCommand = "-s " + deviceId + " shell pm list packages -3"
+        let packagesOutput = runAdbCommand(packagesCommand)
+        let packages = packagesOutput
+            .components(separatedBy: .newlines)
+            .filter { !$0.isEmpty }
+            .map { $0.replacingOccurrences(of: "package:", with: "") }
+
+        // Show package selection dialog
+        let alert = NSAlert()
+        alert.messageText = "Select Package"
+        alert.alertStyle = .informational
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 25))
+        popup.addItems(withTitles: packages)
+        alert.accessoryView = popup
+
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let selectedPackage = popup.selectedItem?.title ?? ""
+            
+            // Get activities for selected package
+            let activitiesCommand = "-s " + deviceId + " shell dumpsys package " + selectedPackage + " | grep -A 1 'Activity'"
+            let activitiesOutput = runAdbCommand(activitiesCommand)
+            let activities = activitiesOutput
+                .components(separatedBy: .newlines)
+                .filter { $0.contains(selectedPackage) }
+                .map { activity -> String in
+                    if let range = activity.range(of: selectedPackage) {
+                        return String(activity[range.lowerBound...])
+                            .trimmingCharacters(in: .whitespaces)
+                            .components(separatedBy: .whitespaces)[0]
+                    }
+                    return ""
+                }
+                .filter { !$0.isEmpty }
+
+            // Show activity selection dialog
+            let activityAlert = NSAlert()
+            activityAlert.messageText = "Select Activity"
+            activityAlert.alertStyle = .informational
+
+            let activityPopup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 25))
+            activityPopup.addItems(withTitles: activities)
+            activityAlert.accessoryView = activityPopup
+
+            activityAlert.addButton(withTitle: "Launch")
+            activityAlert.addButton(withTitle: "Cancel")
+
+            if activityAlert.runModal() == .alertFirstButtonReturn {
+                let selectedActivity = activityPopup.selectedItem?.title ?? ""
+                // Launch selected activity
+                let launchCommand = "-s " + deviceId + " shell am start -n " + selectedActivity
+                _ = runAdbCommand(launchCommand)
+            }
+        }
+    }
 
     func recordScreen(deviceId: String) {
         let command = "-s " + deviceId + " shell screenrecord /sdcard/screenrecord_adbtool.mp4"

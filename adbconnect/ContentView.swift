@@ -105,6 +105,17 @@ struct DeviceActionsView: View {
                     // Copying image data from paste board
                     adb.takeScreenshotAndCopyIt(deviceId: device.id)
                 }
+            
+            // screenshot
+            HStack(alignment: .top) {
+                Image("SettingsIcon").resizable().frame(width: 18.0, height: 18.0)
+                Text("Launch activity")
+            }.contentShape(Rectangle())
+                .onTapGesture {
+                    statusMessaage = "Pick activity to launch"
+                    // Copying image data from paste board
+                    adb.launchActivity(deviceId: device.id)
+                }
 
             // record screen
             HStack(alignment: .top) {
